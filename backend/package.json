@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "bun run --watch src/index.ts ",
+    "dev:worker": "bun run --watch src/worker.ts",
     "build": "bun run build",
     "start": "bun run src/index.ts"
   },

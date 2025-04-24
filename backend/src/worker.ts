@@ -1,10 +1,7 @@
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { VectorStore } from "@langchain/core/vectorstores";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Worker } from "bullmq";
-import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
-import { TaskType } from "@google/generative-ai";
-import { QdrantVectorStore } from "@langchain/qdrant";
+import { getVectorStore } from "./utils";
 
 const worker = new Worker(
 	"file-upload-queue",
@@ -13,7 +10,7 @@ const worker = new Worker(
 		const loader = new PDFLoader(filePath);
 
 		const docs = await loader.load();
-		console.log("Loaded documents:", docs.length);
+		console.log("Loaded documents:", docs.length, docs);
 
 		const splitter = new RecursiveCharacterTextSplitter({
 			chunkSize: 1000,
@@ -21,19 +18,14 @@ const worker = new Worker(
 		});
 
 		const splittedDocs = await splitter.splitDocuments(docs);
-		console.log("Splitted documents:", splittedDocs.length);
+		console.log("Splitted documents:", splittedDocs.length, splittedDocs);
 
-		const embeddings = new GoogleGenerativeAIEmbeddings({
-			apiKey: process.env.GOOGLE_API_KEY,
-			model: "text-embedding-004",
-			taskType: TaskType.RETRIEVAL_DOCUMENT,
-			title: "Document title",
-		});
+		const vectorStore = await getVectorStore(splittedDocs);
+		// vectorStore.ensureCollection();
+		console.log("Vector Store: ", vectorStore);
 
-		// Instantiation
-		const vectorStore = await QdrantVectorStore.fromExistingCollection(embeddings, {});
-
-		// embedder.embedDocuments(splittedDocs)
+		await vectorStore.addDocuments(splittedDocs);
+		console.log("Documents added to vector store");
 	},
 	{
 		concurrency: 100,
